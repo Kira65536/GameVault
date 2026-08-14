@@ -7,6 +7,7 @@ import psycopg
 from dotenv import load_dotenv
 from flask import Flask,flash,g,redirect,render_template,request,url_for,session
 from psycopg.rows import dict_row
+from supabase import create_client
 from werkzeug.security import check_password_hash,generate_password_hash
 
 load_dotenv()
@@ -15,6 +16,10 @@ app=Flask(__name__)
 
 app.secret_key=os.getenv("SECRET_KEY")
 DATABASE_URL=os.getenv("DATABASE_URL")
+SUPABASE_URL=os.getenv("SUPABASE_URL")
+SUPABASE_SECRET_KEY=os.getenv("SUPABASE_SECRET_KEY")
+
+BUCKET="game-covers"
 
 if not app.secret_key:
     raise RuntimeError("SECRET_KEY не найден в .env")
@@ -22,8 +27,16 @@ if not app.secret_key:
 if not DATABASE_URL:
     raise RuntimeError("DATABASE_URL не найден в .env")
 
-BASE_DIR=Path(__file__).resolve().parent
-UPLOAD_FOLDER=BASE_DIR/"static"/"uploads"
+if not SUPABASE_URL:
+    raise RuntimeError("SUPABASE_URL не найден в .env")
+
+if not SUPABASE_SECRET_KEY:
+    raise RuntimeError("SUPABASE_SECRET_KEY не найден в .env")
+
+supabase=create_client(
+    SUPABASE_URL,
+    SUPABASE_SECRET_KEY
+)
 
 ALLOWED_EXTENSIONS={
     ".png",
@@ -32,18 +45,16 @@ ALLOWED_EXTENSIONS={
     ".webp"
 }
 
-UPLOAD_FOLDER.mkdir(parents=True,exist_ok=True)
-
 app.config["MAX_CONTENT_LENGTH"]=5*1024*1024
 
 
 def get_db():
     if "db" not in g:
         g.db=psycopg.connect(
-    DATABASE_URL,
-    row_factory=dict_row,
-    connect_timeout=10
-)
+            DATABASE_URL,
+            row_factory=dict_row,
+            connect_timeout=10
+        )
 
     return g.db
 
@@ -79,8 +90,16 @@ def init_db():
             status TEXT NOT NULL,
             description TEXT NOT NULL,
             image TEXT NOT NULL,
+            image_path TEXT,
             user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE
         )
+        """
+    )
+
+    db.execute(
+        """
+        ALTER TABLE games
+        ADD COLUMN IF NOT EXISTS image_path TEXT
         """
     )
 
@@ -90,6 +109,66 @@ def init_db():
 def allowed_file(filename):
     extension=Path(filename).suffix.lower()
     return extension in ALLOWED_EXTENSIONS
+
+
+def get_public_url(storage_path):
+    public_url=supabase.storage.from_(BUCKET).get_public_url(
+        storage_path
+    )
+
+    if isinstance(public_url,str):
+        return public_url
+
+    if isinstance(public_url,dict):
+        return (
+            public_url.get("publicUrl")
+            or public_url.get("public_url")
+        )
+
+    return (
+        getattr(public_url,"public_url",None)
+        or getattr(public_url,"publicUrl",None)
+        or str(public_url)
+    )
+
+
+def upload_cover(image,user_id):
+    extension=Path(image.filename).suffix.lower()
+    storage_path=f"{user_id}/{uuid4().hex}{extension}"
+
+    content_type=image.mimetype
+
+    if not content_type:
+        content_type={
+            ".png":"image/png",
+            ".jpg":"image/jpeg",
+            ".jpeg":"image/jpeg",
+            ".webp":"image/webp"
+        }.get(extension,"application/octet-stream")
+
+    image.stream.seek(0)
+
+    supabase.storage.from_(BUCKET).upload(
+        path=storage_path,
+        file=image.stream,
+        file_options={
+            "content-type":content_type,
+            "upsert":"false"
+        }
+    )
+
+    image_url=get_public_url(storage_path)
+
+    return image_url,storage_path
+
+
+def delete_cover(storage_path):
+    if not storage_path:
+        return
+
+    supabase.storage.from_(BUCKET).remove(
+        [storage_path]
+    )
 
 
 def login_required(view):
@@ -321,40 +400,58 @@ def add_game():
                 error="Разрешены PNG, JPG, JPEG и WEBP"
             )
 
-        extension=Path(image.filename).suffix.lower()
-        image_name=f"{uuid4().hex}{extension}"
+        try:
+            image_url,image_path=upload_cover(
+                image,
+                session["user_id"]
+            )
 
-        image.save(
-            UPLOAD_FOLDER/image_name
-        )
+        except Exception:
+            return render_template(
+                "add_game.html",
+                error="Не удалось загрузить картинку"
+            )
 
         db=get_db()
 
-        db.execute(
-            """
-            INSERT INTO games(
-                name,
-                genre,
-                rating,
-                status,
-                description,
-                image,
-                user_id
+        try:
+            db.execute(
+                """
+                INSERT INTO games(
+                    name,
+                    genre,
+                    rating,
+                    status,
+                    description,
+                    image,
+                    image_path,
+                    user_id
+                )
+                VALUES(%s,%s,%s,%s,%s,%s,%s,%s)
+                """,
+                (
+                    name,
+                    genre,
+                    rating,
+                    status,
+                    description,
+                    image_url,
+                    image_path,
+                    session["user_id"]
+                )
             )
-            VALUES(%s,%s,%s,%s,%s,%s,%s)
-            """,
-            (
-                name,
-                genre,
-                rating,
-                status,
-                description,
-                image_name,
-                session["user_id"]
-            )
-        )
 
-        db.commit()
+            db.commit()
+
+        except Exception:
+            db.rollback()
+
+            try:
+                delete_cover(image_path)
+            except Exception:
+                pass
+
+            raise
 
         flash("Игра успешно добавлена 🎮")
 
@@ -392,13 +489,7 @@ def delete_game(game_id):
             url_for("index")
         )
 
-    image_name=game["image"]
-
-    if image_name:
-        image_path=UPLOAD_FOLDER/image_name
-
-        if image_path.exists():
-            image_path.unlink()
+    image_path=game["image_path"]
 
     db.execute(
         """
@@ -412,6 +503,11 @@ def delete_game(game_id):
     )
 
     db.commit()
+
+    try:
+        delete_cover(image_path)
+    except Exception:
+        pass
 
     flash("Игра удалена 🗑️")
 
@@ -515,7 +611,11 @@ def edit_game(game_id):
                 error="Рейтинг должен быть от 0 до 10"
             )
 
-        image_name=game["image"]
+        image_url=game["image"]
+        image_path=game["image_path"]
+
+        new_image_path=None
+        old_image_path=image_path
 
         if image is not None and image.filename!="":
             if not allowed_file(image.filename):
@@ -526,45 +626,67 @@ def edit_game(game_id):
                     error="Разрешены PNG, JPG, JPEG и WEBP"
                 )
 
-            extension=Path(image.filename).suffix.lower()
-            new_image_name=f"{uuid4().hex}{extension}"
+            try:
+                image_url,new_image_path=upload_cover(
+                    image,
+                    session["user_id"]
+                )
 
-            image.save(
-                UPLOAD_FOLDER/new_image_name
+                image_path=new_image_path
+
+            except Exception:
+                return render_template(
+                    "edit_game.html",
+                    game=game,
+                    game_id=game_id,
+                    error="Не удалось загрузить картинку"
+                )
+
+        try:
+            db.execute(
+                """
+                UPDATE games
+                SET
+                    name=%s,
+                    genre=%s,
+                    rating=%s,
+                    status=%s,
+                    description=%s,
+                    image=%s,
+                    image_path=%s
+                WHERE id=%s AND user_id=%s
+                """,
+                (
+                    name,
+                    genre,
+                    rating,
+                    status,
+                    description,
+                    image_url,
+                    image_path,
+                    game_id,
+                    session["user_id"]
+                )
             )
 
-            old_image_path=UPLOAD_FOLDER/image_name
+            db.commit()
 
-            if old_image_path.exists():
-                old_image_path.unlink()
+        except Exception:
+            db.rollback()
 
-            image_name=new_image_name
+            if new_image_path:
+                try:
+                    delete_cover(new_image_path)
+                except Exception:
+                    pass
 
-        db.execute(
-            """
-            UPDATE games
-            SET
-                name=%s,
-                genre=%s,
-                rating=%s,
-                status=%s,
-                description=%s,
-                image=%s
-            WHERE id=%s AND user_id=%s
-            """,
-            (
-                name,
-                genre,
-                rating,
-                status,
-                description,
-                image_name,
-                game_id,
-                session["user_id"]
-            )
-        )
+            raise
 
-        db.commit()
+        if new_image_path and old_image_path:
+            try:
+                delete_cover(old_image_path)
+            except Exception:
+                pass
 
         flash("Изменения сохранены ✅")
 

@@ -199,9 +199,9 @@
             {% for game_id, game in games %}
                 <article class="game-card">
                     <img
-                        class="game-image"
-                        src="{{ url_for('static', filename='uploads/' + game['image']) }}"
-                        alt="Обложка игры {{ game['name'] }}"
+                    src="{{ game['image'] }}"
+                    class="game-image"
+                    alt="Обложка игры {{ game['name'] }}"
                     >
 
                     <div class="game-info">

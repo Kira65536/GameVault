@@ -5,3 +5,4 @@ __pycache__/
 games.db
 games.json
 static/uploads/
+app_backup.py
