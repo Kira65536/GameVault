@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Регистрация | GameVault</title>
+<link rel="stylesheet" href="{{ url_for('static',filename='style.css') }}">
+<link rel="icon" type="image/png" href="{{ url_for('static',filename='favicon.png') }}">
+</head>
+
+<body class="form-page">
+
+<div class="form-card">
+
+<a class="back-link" href="{{ url_for('index') }}">
+← Назад
+</a>
+
+<h1>Регистрация</h1>
+
+{% if error %}
+<div class="error-message">
+{{ error }}
+</div>
+{% endif %}
+
+<form method="POST">
+
+<label for="username">Имя пользователя</label>
+
+<input
+type="text"
+id="username"
+name="username"
+required
+>
+
+<label for="password">Пароль</label>
+
+<input
+type="password"
+id="password"
+name="password"
+required
+>
+
+<button class="submit-button" type="submit">
+Создать аккаунт
+</button>
+
+</form>
+
+<p>
+Уже есть аккаунт?
+<a class="back-link" href="{{ url_for('login') }}">
+Войти
+</a>
+</p>
+
+</div>
+
+</body>
+</html>

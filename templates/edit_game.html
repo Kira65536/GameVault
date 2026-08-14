@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        Редактировать {{ game["name"] }}
+    </title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='style.css') }}"
+    >
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+</head>
+
+
+<body class="form-page">
+
+    <main class="form-card">
+
+        <a
+            class="back-link"
+            href="{{ url_for('game_details', game_id=game_id) }}"
+        >
+            ← Назад
+        </a>
+
+
+        <h1>
+            Редактировать игру
+        </h1>
+
+
+        {% if error %}
+
+            <p class="error-message">
+                {{ error }}
+            </p>
+
+        {% endif %}
+
+
+        <form
+            method="POST"
+            enctype="multipart/form-data"
+        >
+
+            <label for="name">
+                Название
+            </label>
+
+            <input
+                id="name"
+                name="name"
+                type="text"
+                value="{{ game['name'] }}"
+                required
+            >
+
+
+            <label for="genre">
+                Жанр
+            </label>
+
+            <input
+                id="genre"
+                name="genre"
+                type="text"
+                value="{{ game['genre'] }}"
+                required
+            >
+
+
+            <label for="rating">
+                Рейтинг
+            </label>
+
+            <input
+                id="rating"
+                name="rating"
+                type="number"
+                min="0"
+                max="10"
+                value="{{ game['rating'] }}"
+                required
+            >
+
+
+            <label for="status">
+                Статус
+            </label>
+
+            <select
+                id="status"
+                name="status"
+                required
+            >
+
+                <option
+                    value="Хочу пройти"
+                    {% if game["status"] == "Хочу пройти" %}
+                        selected
+                    {% endif %}
+                >
+                    Хочу пройти
+                </option>
+
+
+                <option
+                    value="Играю"
+                    {% if game["status"] == "Играю" %}
+                        selected
+                    {% endif %}
+                >
+                    Играю
+                </option>
+
+
+                <option
+                    value="Пройдена"
+                    {% if game["status"] == "Пройдена" %}
+                        selected
+                    {% endif %}
+                >
+                    Пройдена
+                </option>
+
+
+                <option
+                    value="Заброшена"
+                    {% if game["status"] == "Заброшена" %}
+                        selected
+                    {% endif %}
+                >
+                    Заброшена
+                </option>
+
+            </select>
+
+
+            <label for="description">
+                Описание
+            </label>
+
+            <textarea
+                id="description"
+                name="description"
+                rows="6"
+                required
+            >{{ game["description"] }}</textarea>
+
+
+            <p>
+                Текущая обложка:
+            </p>
+
+            <img
+                class="edit-preview"
+                src="{{ url_for('static', filename='uploads/' + game['image']) }}"
+                alt="{{ game['name'] }}"
+            >
+
+
+            <label for="image">
+                Заменить обложку
+            </label>
+
+            <input
+                id="image"
+                name="image"
+                type="file"
+                accept=".png,.jpg,.jpeg,.webp"
+            >
+
+
+            <button
+                class="submit-button"
+                type="submit"
+            >
+                Сохранить изменения
+            </button>
+
+        </form>
+
+    </main>
+
+</body>
+
+</html>

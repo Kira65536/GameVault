@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Вход | GameVault</title>
+<link rel="stylesheet" href="{{ url_for('static',filename='style.css') }}">
+<link rel="icon" type="image/png" href="{{ url_for('static',filename='favicon.png') }}">
+</head>
+
+<body class="form-page">
+
+<div class="form-card">
+
+<h1>Вход в GameVault</h1>
+
+{% if error %}
+<div class="error-message">
+{{ error }}
+</div>
+{% endif %}
+
+<form method="POST">
+
+<label for="username">Имя пользователя</label>
+
+<input
+type="text"
+id="username"
+name="username"
+required
+>
+
+<label for="password">Пароль</label>
+
+<input
+type="password"
+id="password"
+name="password"
+required
+>
+
+<button class="submit-button" type="submit">
+Войти
+</button>
+
+</form>
+
+<p>
+Нет аккаунта?
+<a class="back-link" href="{{ url_for('register') }}">
+Зарегистрироваться
+</a>
+</p>
+
+</div>
+
+</body>
+</html>

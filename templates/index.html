@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>GameVault</title>
+
+   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">    
+</head>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const notifications = document.querySelectorAll(".notification")
+        notifications.forEach(function(notification) {
+            setTimeout(function() {
+                notification.style.opacity = "0"
+                notification.style.transform = "translateX(30px)"
+                setTimeout(function() {
+                    notification.remove()
+                }, 400)
+            }, 3000)
+        })
+    })
+</script>
+
+<body>
+    {% with messages = get_flashed_messages() %}
+
+    {% if messages %}
+
+        <div class="notifications">
+
+            {% for message in messages %}
+
+                <div class="notification">
+                    {{ message }}
+                </div>
+
+            {% endfor %}
+
+        </div>
+
+    {% endif %}
+
+{% endwith %}
+    <header class="header">
+        <h1>🎮 GameVault</h1>
+        <p>Сайт-каталог игр</p>
+        <a
+            class = "add-button"
+            href = "{{url_for('add_game')}}"
+        >
+        Добавить игру
+        </a>
+        <div class="user-panel">
+        <span>👤 {{session["username"]}}</span>
+        <a href="{{url_for('logout')}}" class="logout-button">Выйти</a>
+</div>
+    </header>
+
+    <main class="container">
+        <h2 class="section-title">Мои игры</h2>
+        <div class="stats">
+            <div class="stat-card">
+                <span class="stat-number">
+                    {{stats["total"]}}
+                </span>
+                <span class="stat-name">
+                    Всего
+                </span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-number">
+                    {{stats["playing"] or 0}}
+                </span>
+                <span class="stat-name">
+                    Играю
+                </span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-number">
+                    {{stats["completed"] or 0}}
+                </span>
+                <span class="stat-name">
+                    Пройдено
+                </span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-number">
+                    {{stats["want"] or 0}}
+                </span>
+                <span class="stat-name">
+                    Хочу пройти
+                </span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-number">
+                    {{stats["abandoned"] or 0}}
+                </span>
+                <span class="stat-name">
+                    Заброшена
+                </span>
+            </div>
+</div>
+    <form
+        class="search-form"
+        method="GET"
+        action="{{ url_for('index') }}"
+    >
+
+        <input
+            class="search-input"
+            type="text"
+            name="q"
+            value="{{ search }}"
+            placeholder="Поиск игры..."
+        >
+
+        <input
+            type="hidden"
+            name="status"
+            value="{{ status_filter }}"
+        >
+        <input
+            type="hidden"
+            name="sort"
+            value="{{ sort }}"
+        >
+
+        <button
+            class="search-button"
+            type="submit"
+        >
+            🔍 Найти
+        </button>
+
+    </form>
+
+
+    <div class="filters">
+
+        <a
+            class="filter-button {% if not status_filter %}active{% endif %}"
+            href="{{ url_for('index', q=search, sort=sort) }}"        >
+            Все
+        </a>
+
+
+        <a
+            class="filter-button {% if status_filter == 'Играю' %}active{% endif %}"
+            href="{{ url_for('index', q=search, status='Играю', sort=sort) }}"        >
+            Играю
+        </a>
+
+
+        <a
+            class="filter-button {% if status_filter == 'Хочу пройти' %}active{% endif %}"
+            href="{{ url_for('index', q=search, status='Хочу пройти' , sort=sort) }}"
+        >
+            Хочу пройти
+        </a>
+
+
+        <a
+            class="filter-button {% if status_filter == 'Пройдена' %}active{% endif %}"
+            href="{{ url_for('index', q=search, status='Пройдена', sort=sort) }}"
+        >
+            Пройдена
+        </a>
+
+
+        <a
+            class="filter-button {% if status_filter == 'Заброшена' %}active{% endif %}"
+            href="{{ url_for('index', q=search, status='Заброшена', sort=sort) }}"
+        >
+            Заброшена
+        </a>
+
+    </div>
+<form class="sort-form" method="GET" action="{{ url_for('index') }}">
+<input type="hidden" name="q" value="{{ search }}">
+<input type="hidden" name="status" value="{{ status_filter }}">
+<label for="sort">Сортировка:</label>
+<select id="sort" name="sort" onchange="this.form.submit()">
+<option value="newest" {% if sort=="newest" %}selected{% endif %}>Сначала новые</option>
+<option value="oldest" {% if sort=="oldest" %}selected{% endif %}>Сначала старые</option>
+<option value="rating_high" {% if sort=="rating_high" %}selected{% endif %}>Рейтинг: высокий → низкий</option>
+<option value="rating_low" {% if sort=="rating_low" %}selected{% endif %}>Рейтинг: низкий → высокий</option>
+<option value="name_asc" {% if sort=="name_asc" %}selected{% endif %}>Название: А → Я</option>
+<option value="name_desc" {% if sort=="name_desc" %}selected{% endif %}>Название: Я → А</option>
+</select>
+</form>
+
+</div>
+
+        <section class="games-grid">
+            {% for game_id, game in games %}
+                <article class="game-card">
+                    <img
+                        class="game-image"
+                        src="{{ url_for('static', filename='uploads/' + game['image']) }}"
+                        alt="Обложка игры {{ game['name'] }}"
+                    >
+
+                    <div class="game-info">
+                        <h3>{{ game["name"] }}</h3>
+
+                        <p>
+                            <strong>Жанр:</strong>
+                            {{ game["genre"] }}
+                        </p>
+
+                        <p class="rating">
+                                <strong>Рейтинг:</strong>
+                                {% for star in range(1, 11) %}
+                                    {% if star <= game["rating"] %}
+                                        <span class="star active-star">★</span>
+                                    {% else %}
+                                        <span class="star">★</span>
+                                    {% endif %}
+                                {% endfor %}
+                                <span class="rating-number">
+                                    {{ game["rating"] }}/10
+                                </span>
+                        </p>
+
+                        <p>
+                            <strong>Статус:</strong>
+                            <span class="status-badge status-{{game['status'] | replace('', '-') | lower}}"> 
+                                {{ game["status"]}}
+                            </span>
+                        </p>
+
+                        <p class="description">
+                            {{ game["description"] }}
+                        </p>
+
+                        <a
+                             class="details-button"
+                            href="{{ url_for('game_details', game_id=game_id) }}"
+                        >
+                            Подробнее
+                        </a>
+                        <form
+                            method="POST"
+                            action="{{ url_for('delete_game', game_id=game_id) }}"
+                            onsubmit="return confirm('Точно удалить игру {{game.name}}?')"
+                        >
+                            <button
+                                class="delete-button"
+                                type="submit"
+                            >
+                                Удалить
+                            </button>
+                    </form>
+                    </div>
+                </article>
+
+            {% else %}
+                <div class="empty-state">
+                    {% if search or status_filter %}
+                    <div class="empty-icon">
+                        🔍
+                    </div>
+                    <h3>
+                        Ничего не найдено
+                    </h3>
+                    <p>
+                        Попробуй изменить поиск или выбрать другой статус 
+                    </p>
+                    <a
+                        class="reset-button"
+                        href="{{ url_for('index') }}"
+                    >
+                        Сбросить поиск
+                    </a>
+                {% else %}
+                    <div class="empty-icon">
+                        🎮
+                    </div>
+                    <h3>
+                        Здесь пока пусто 
+                    </h3>
+                    <p>
+                        Добавте свою первую игру в коллекцию
+                    </p>
+                    <a
+                        class="reset-button"
+                        href="{{ url_for('add_game') }}"
+                    >
+                        Добавте игру
+                    </a>
+                {% endif %}
+                </div>
+            {% endfor %}
+                
+        </section>
+    </main>
+</body>
+</html>

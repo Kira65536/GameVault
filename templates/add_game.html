@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Добавить игру</title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='style.css') }}"
+    >
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+</head>
+
+<body class="form-page">
+    <main class="form-card">
+        <a
+            class="back-link"
+            href="{{ url_for('index') }}"
+        >
+            ← Вернуться на главную
+        </a>
+
+        <h1>Добавить игру</h1>
+
+        {% if error %}
+            <p class="error-message">
+                {{ error }}
+            </p>
+        {% endif %}
+
+        <form
+            method="POST"
+            enctype="multipart/form-data"
+        >
+            <label for="name">Название игры</label>
+
+            <input
+                id="name"
+                name="name"
+                type="text"
+                placeholder="Например, Minecraft"
+                required
+            >
+            <img
+                id="image-preview"
+                class="image-preview"
+                src=""
+                alt="Предпросмотр обложки"
+            >
+
+            <label for="genre">Жанр</label>
+
+            <input
+                id="genre"
+                name="genre"
+                type="text"
+                placeholder="Например, Песочница"
+                required
+            >
+
+            <label for="rating">Рейтинг</label>
+
+            <input
+                id="rating"
+                name="rating"
+                type="number"
+                min="0"
+                max="10"
+                placeholder="9"
+                required
+            >
+
+            <label for="status">Статус</label>
+
+            <select
+                id="status"
+                name="status"
+                required
+            >
+                <option value="">Выберите статус</option>
+                <option value="Хочу пройти">Хочу пройти</option>
+                <option value="Играю">Играю</option>
+                <option value="Пройдена">Пройдена</option>
+                <option value="Заброшена">Заброшена</option>
+            </select>
+
+            <label for="description">Описание</label>
+
+            <textarea
+                id="description"
+                name="description"
+                rows="5"
+                placeholder="Краткое описание игры"
+                required
+            ></textarea>
+
+            <label for="image">Обложка</label>
+
+            <input
+                id="image"
+                name="image"
+                type="file"
+                accept=".png,.jpg,.jpeg,.webp"
+                required
+            >
+
+            <button
+                class="submit-button"
+                type="submit"
+            >
+                Сохранить игру
+            </button>
+        </form>
+    </main>
+    <script>
+        const imageInput = document.getElementById("image")
+        const imagePreview = document.getElementById("image-preview")
+        imageInput.addEventListener("change", function () {
+            const file = this.files[0]
+            if (file) {
+                imagePreview.src = URL.createObjectURL(file)
+                imagePreview.style.display = "block"
+            }
+        })
+</script>
+</body>
+</html>
