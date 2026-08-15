@@ -47,17 +47,29 @@ GameVault - это веб-приложение для собственной к�
 Запуск локально:
 
 bash
+
 git clone https://github.com/Kira65536/GameVault.git
+
 cd GameVault
+
 python -m venv .venv
+
 source .venv/bin/activate
+
 pip install -r requirements.txt
+
 python app.py
+
+
 
 Для запуска необходимо создать .env с переменными:
 
 env
+
 DATABASE_URL=
+
 SECRET_KEY=
+
 SUPABASE_URL=
+
 SUPABASE_SECRET_KEY=
