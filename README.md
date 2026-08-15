@@ -46,7 +46,7 @@ GameVault - это веб-приложение для собственной к�
 
 Скриншот:
 
-[GameVault](screenshots/gamevault-main.png)
+![GameVault](screenshots/gamevault-main.png)
 
 
 Запуск локально:
