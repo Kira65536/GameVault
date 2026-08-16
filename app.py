@@ -708,6 +708,23 @@ with app.app_context():
     init_db()
 
 
+@app.route("/robots.txt")
+def robots_txt():
+    return """User-agent: *
+Allow: /
+Sitemap: https://gamevault-1-dt2g.onrender.com/sitemap.xml
+""", 200, {"Content-Type": "text/plain; charset=utf-8"}
+
+@app.route("/sitemap.xml")
+def sitemap():
+    return """<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <url>
+        <loc>https://gamevault-1-dt2g.onrender.com/</loc>
+    </url>
+</urlset>
+""", 200, {"Content-Type": "application/xml; charset=utf-8"}
+
 if __name__=="__main__":
     app.run(
         host="0.0.0.0",
